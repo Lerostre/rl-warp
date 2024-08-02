@@ -1,0 +1,43 @@
+[tool.poetry]
+name = "rl-warp"
+version = "0.1.0"
+description = ""
+authors = [""]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+trl = "0.9.6"
+scipy = "1.14.0"
+bokeh = "*"
+torch = "2.4.0"
+numpy = "1.26.4"
+polars = "*"
+pandas = "*"
+transformers = "4.43.3"
+nltk = "3.8.1"
+pytorch-lightning = "2.3.3"
+datasets = "^2.20.0"
+peft = "^0.12.0"
+wandb = "^0.17.5"
+ipywidgets = "^8.1.3"
+omegaconf = "^2.3.0"
+
+[[tool.poetry.source]]
+name = "sbmt-pypi-cache"
+url = "https://nexus.sbmt.io/repository/pypi/simple"
+priority = "default"
+
+[[tool.poetry.source]]
+name = "paas-python-libs"
+url = "https://nexus.sbmt.io/repository/paas-python-libs/simple"
+priority = "explicit"
+
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

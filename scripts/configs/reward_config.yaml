@@ -1,0 +1,3 @@
+defaults:
+  - reward_peft
+  - reward_trainer
