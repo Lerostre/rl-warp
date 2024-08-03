@@ -1,8 +1,0 @@
-defaults:
-  - reward/peft
-  - reward/trainer
-  - reward/dataset
-  - reward/model
-  - reward/tokenizer
-
-device: "cpu"

@@ -1,0 +1,6 @@
+tokenizer:
+  source: "lvwerra/distilbert-imdb-cased"
+  name: 
+  args:
+    max_length: 512
+    use_fast: True

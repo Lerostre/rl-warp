@@ -1,0 +1,8 @@
+defaults:
+  - reward/peft@_here_
+  - reward/trainer@_here_
+  - reward/dataset@_here_
+  - reward/model@_here_
+  - reward/tokenizer@_here_
+
+seed: 42

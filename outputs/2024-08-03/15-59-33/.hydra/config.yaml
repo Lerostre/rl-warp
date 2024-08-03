@@ -1,0 +1,44 @@
+peft:
+  task_type: LoraConfig.TaskType.SEQ_CLS
+  inference_mode: false
+  r: 8
+  lora_alpha: 32
+  lora_dropout: 0.1
+  modules_to_save:
+  - scores
+  target_modules: all-linear
+trainer:
+  output_dir: outputs/
+  per_device_train_batch_size: 64
+  num_train_epochs: 1
+  gradient_accumulation_steps: 16
+  gradient_checkpointing: true
+  gradient_checkpointing_kwargs:
+    use_reentrant: false
+  learning_rate: 1.41e-05
+  report_to: none
+  remove_unused_columns: false
+  optim: adamw_torch
+  logging_steps: 500
+  max_length: 512
+  load_best_model_at_end: true
+  evaluation_strategy: steps
+dataset:
+  source: imdb
+  name: reward_dataset
+  test_size: 0.2
+  n_samples: 25000
+  rewrite: true
+model:
+  source: lvwerra/distilbert-imdb-cased
+  name: reward_model
+  args:
+    local_files_only: true
+  device: cpu
+tokenizer:
+  source: lvwerra/distilbert-imdb-cased
+  name: null
+  args:
+    max_length: 512
+    use_fast: true
+seed: 42

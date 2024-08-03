@@ -1,0 +1,6 @@
+model:
+  source: "lvwerra/distilbert-imdb-cased"
+  name: "reward_model"
+  args:
+    local_files_only: True
+  device: "cpu"

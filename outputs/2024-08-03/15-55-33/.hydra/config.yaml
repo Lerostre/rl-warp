@@ -1,0 +1,7 @@
+reward:
+- reward/peft
+- reward/trainer
+- reward/dataset
+- reward/model
+- reward/tokenizer
+seed: 42

@@ -1,0 +1,8 @@
+peft:
+  task_type: LoraConfig.TaskType.SEQ_CLS
+  inference_mode: False
+  r: 8
+  lora_alpha: 32
+  lora_dropout: 0.1
+  modules_to_save: ["scores"]
+  target_modules: 'all-linear'
