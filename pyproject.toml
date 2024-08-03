@@ -2,7 +2,7 @@
 name = "rl-warp"
 version = "0.1.0"
 description = ""
-authors = [""]
+authors = ["idk"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -22,6 +22,8 @@ peft = "^0.12.0"
 wandb = "^0.17.5"
 ipywidgets = "^8.1.3"
 omegaconf = "^2.3.0"
+loguru = "^0.7.2"
+hydra-core = "^1.3.2"
 
 [[tool.poetry.source]]
 name = "sbmt-pypi-cache"
@@ -32,8 +34,6 @@ priority = "default"
 name = "paas-python-libs"
 url = "https://nexus.sbmt.io/repository/paas-python-libs/simple"
 priority = "explicit"
-
-
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"

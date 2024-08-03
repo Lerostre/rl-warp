@@ -1,0 +1,4 @@
+model:
+  source: "lvwerra/distillbert-imdb-cased"
+  name: "rewar_model"
+  args:
