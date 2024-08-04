@@ -1,0 +1,5 @@
+scheduler:
+  cls: pl_bolts.optimizers.lr_scheduler.LinearWarmupCosineAnnealingLR
+  kwargs:
+    warmup_epochs: 3
+    max_epochs: 100

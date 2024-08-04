@@ -1,17 +1,16 @@
+import hydra
 import os
 from pathlib import Path
 from loguru import logger
-
-import hydra
 from omegaconf import DictConfig, OmegaConf
 from peft import LoraConfig
 
-from datasets import load_dataset, load_from_disk
+from datasets import load_from_disk
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from trl import RewardConfig, RewardTrainer
 
-from constants import CONFIG_DIR, DATASET_DIR, MODEL_DIR
-from utils.data import df_self_product, prepare_reward_dataset
+from constants import DATASET_DIR, MODEL_DIR
+from utils.data import create_reward_dataset
 from utils.misc import seed_everything
 
 
@@ -51,19 +50,14 @@ def train_reward(cfg: DictConfig) -> None:
 
     # prepare dataset
     if not os.path.exists(dataset_path) or cfg.dataset.rewrite:
-
         logger.info(f"Creating `{cfg.dataset.name}` dataset")
-        dataset = load_dataset(cfg.dataset.source, split="train").to_pandas()
-        dataset = (
-            df_self_product(dataset, partition_col="label")
-            .sample(cfg.dataset.n_samples)
-            .rename({"text_0": "chosen", "text_1": "rejected"})
+        dataset = create_reward_dataset(
+            source=cfg.dataset.source,
+            tokenizer=tokenizer,
+            n_samples=cfg.dataset.n_samples,
+            test_size=cfg.dataset.test_size,
+            dataset_path=dataset_path,
         )
-        dataset = prepare_reward_dataset(
-            dataset.to_dict(as_series=False), tokenizer=tokenizer, verbose=True
-        )
-        dataset = dataset.train_test_split(test_size=cfg.dataset.test_size)
-        dataset.save_to_disk(dataset_path)
     else:
         logger.info(f"Loading {dataset_path}")
         dataset = load_from_disk(dataset_path)
@@ -76,7 +70,7 @@ def train_reward(cfg: DictConfig) -> None:
         tokenizer=tokenizer,
         train_dataset=dataset["train"],
         eval_dataset=dataset["test"],
-        peft_config=peft_config,
+        # peft_config=peft_config,
     )
     trainer.train()
 
@@ -86,4 +80,4 @@ def train_reward(cfg: DictConfig) -> None:
 
 train_reward()
 
-# poetry run scripts train_reward --config-name reward_config
+# poetry run python warp/train_reward.py --config-name reward_config

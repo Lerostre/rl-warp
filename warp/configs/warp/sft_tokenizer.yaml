@@ -1,0 +1,5 @@
+sft_tokenizer:
+  source: "lvwerra/gpt2-imdb"
+  args:
+    max_length: 512
+    use_fast: True

@@ -1,0 +1,14 @@
+defaults:
+  - warp/trainer@_here_
+  - warp/dataset@_here_
+  - warp/sft_model@_here_
+  - warp/sft_tokenizer@_here_
+  - warp/reward_model@_here_
+  - warp/reward_tokenizer@_here_
+  - warp/optimizer@_here_
+  - warp/scheduler@_here_
+
+seed: 42
+project: "warp"
+run_name: "initial"
+device: "cpu"

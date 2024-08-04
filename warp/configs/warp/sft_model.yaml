@@ -1,0 +1,5 @@
+sft_model:
+  source: "lvwerra/gpt2-imdb"
+  name: "lvwerra/gpt2-imdb"
+  args:
+    local_files_only: False

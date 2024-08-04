@@ -1,0 +1,10 @@
+dataset:
+  source: "imdb"
+  name: "warp_dataset"
+  test_size: 0.2
+  rewrite: True
+  max_length: 10
+  truncation: True
+
+dataloader:
+  batch_size: 64

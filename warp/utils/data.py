@@ -1,12 +1,13 @@
 import gc
-from typing import Literal, Sequence, TypeVar
+from typing import Literal, Sequence, TypeVar, Optional
+from loguru import logger
 
 import numpy as np
 import pandas as pd
 import polars as pl
-from datasets import Dataset
-from loguru import logger
-from tqdm.notebook import tqdm, trange
+from torch.nn import functional as F
+
+from datasets import Dataset, load_dataset
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
 pl_df = TypeVar("pl_df", pl.DataFrame, pl.LazyFrame)
@@ -107,10 +108,8 @@ def prepare_reward_dataset(
     tokenizer: PreTrainedTokenizer,
     max_length: int = 512,
     truncation: bool = True,
-    verbose: bool = True,
 ) -> Dataset:
 
-    logger.enable("data") if verbose else logger.disable("data")
     token_kwargs = dict(
         truncation=truncation,
         max_length=max_length,
@@ -130,16 +129,36 @@ def prepare_reward_dataset(
     return dataset
 
 
-def get_reward_dataset(
+def create_reward_dataset(
+    source: str,
+    tokenizer: PreTrainedTokenizer,
+    n_samples: int | float = 25000,
+    test_size: int | float = 0.2,
+    dataset_path: str | None = None,
+) -> Dataset:
+    dataset = load_dataset(source, split="train").to_pandas()
+    dataset = (
+        df_self_product(dataset, partition_col="label")
+        .sample(n_samples)
+        .rename({"text_0": "chosen", "text_1": "rejected"})
+    )
+    dataset = prepare_reward_dataset(
+        dataset.to_dict(as_series=False), tokenizer=tokenizer
+    )
+    dataset = dataset.train_test_split(test_size=test_size)
+    if dataset_path is not None:
+        dataset.save_to_disk(dataset_path)
+    return dataset
+
+
+def prepare_warp_dataset(
     examples: dict[str, list],
     tokenizer: PreTrainedTokenizer,
-    model: PreTrainedModel,
+    model: Optional[PreTrainedModel] = None,
     max_length: int = 15,
     truncation: bool = True,
-    verbose: bool = True,
 ) -> Dataset:
 
-    logger.enable("data") if verbose else logger.disable("data")
     new_examples = dict()
 
     logger.info("Starting tokenizing `text`")
@@ -151,14 +170,36 @@ def get_reward_dataset(
         return_tensors="pt",
     )
     new_examples.update(tokenized)
+    new_examples.update({"text": examples["text"]})
 
-    logger.info("Starting reward estimation of `text`")
-    new_examples["reward"] = model(
-        input_ids=new_examples["input_ids"],
-        attention_mask=new_examples["attention_mask"],
-    ).logits[:, 1]
+    # potentially might be easier to preload rewards
+    # logger.info("Starting reward estimation of `text`")
+    # new_examples["reward"] = F.softmax(
+    #     model(
+    #         input_ids=new_examples["input_ids"],
+    #         attention_mask=new_examples["attention_mask"],
+    #     ).logits
+    # )[:, 1]
 
     dataset = Dataset.from_dict(new_examples)
     dataset.set_format(type="torch")
-    logger.info("Estimating finished\n", dataset)
+    return dataset
+
+
+def create_warp_dataset(
+    source: str,
+    tokenizer: PreTrainedTokenizer,
+    max_length: int = 15,
+    truncation: bool = True,
+    dataset_path: str | None = None,
+) -> Dataset:
+    dataset = load_dataset(source, split="train").to_pandas()
+    dataset = prepare_warp_dataset(
+        pl.DataFrame(dataset).to_dict(as_series=False),
+        tokenizer=tokenizer,
+        max_length=max_length,
+        truncation=truncation,
+    )
+    if dataset_path is not None:
+        dataset.save_to_disk(dataset_path)
     return dataset

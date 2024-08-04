@@ -1,4 +1,4 @@
-tokenizer:
+reward_tokenizer:
   source: "distilbert/distilbert-imdb-cased"
   name: 
   args:

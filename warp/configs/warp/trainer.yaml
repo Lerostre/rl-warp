@@ -1,0 +1,10 @@
+trainer:
+  num_iterations: 2
+  num_runs: 2
+  num_steps: 100
+  mu: 0.01
+  lamb: 0.5
+  eta: 0.5
+  beta: 0.1
+  min_new_tokens: 15
+  temperature: 0.9
