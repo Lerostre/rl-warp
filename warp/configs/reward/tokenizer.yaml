@@ -1,5 +1,5 @@
 tokenizer:
-  source: "distilbert/distilbert-imdb-cased"
+  source: "distilbert/distilbert-base-cased"
   name: 
   args:
     max_length: 512

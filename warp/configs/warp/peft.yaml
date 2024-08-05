@@ -1,0 +1,7 @@
+peft:
+  task_type: TaskType.CAUSAL_LM
+  inference_mode: False
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  fan_in_fan_out: True

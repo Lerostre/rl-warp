@@ -104,49 +104,62 @@ class WARPTrainer(TorchBase):
 
     def training_step(self):
 
+        # make copies of sft_model
         theta = copy.deepcopy(self.sft_model)
         theta_ema = copy.deepcopy(self.sft_model)
+        # start tokenizer and scheduler
         optimizer = self.optimizer(
             params=theta.parameters(), **self.optimizer_kwargs
         )
         scheduler = self.scheduler(optimizer, **self.scheduler_kwargs)
         loss_history = defaultdict(list)
 
+        # for t in T
         for t in trange(self.num_steps, desc="Going through steps"):
 
             optimizer.zero_grad()
 
-            input_ids = next(iter(self.loader))["input_ids"].to(self.device)
+            batch = next(iter(self.loader))
+            input_ids = batch["input_ids"].to(self.device)
+            attention_mask = batch["attention_mask"].to(self.device)
 
+            # generate y ~ \pi_theta(| x)
             completion = theta.generate(
                 input_ids,
+                attention_mask=attention_mask,
                 temperature=self.temperature,
-                min_new_tokens=self.min_new_tokens,
+                # min_new_tokens=self.min_new_tokens,
+                pad_token_id=self.sft_tokenizer.eos_token_id,
             )
             len_generated = completion.shape[1] - input_ids.shape[1]
 
-            logps_theta = policy(theta, completion, len_generated)
-            logps_ema = policy(theta_ema, completion, len_generated)
+            # get policies, reward and compute KL reg
+            logps_theta = policy(theta, completion, None, len_generated)
+            logps_ema = policy(theta_ema, completion, None, len_generated)
             reward = self.get_reward(input_ids, completion)
+            kl_div = logps_theta - logps_ema
 
-            reward_beta = (
-                reward - self.beta * (logps_theta - logps_ema)
-            ).detach()
-
+            # theta update
+            reward_beta = reward - self.beta * kl_div
             loss = (reward_beta * logps_theta).mean()
             loss.backward()
             optimizer.step()
             scheduler.step()
 
+            # theta_ema update
             with torch.no_grad():
                 for param, param_ema in zip(
                     theta.parameters(), theta_ema.parameters()
                 ):
-                    param_ema.copy_((1 - self.mu) * param_ema + self.mu * param)
+                    if param_ema.requires_grad:
+                        param_ema.copy_(
+                            (1 - self.mu) * param_ema + self.mu * param
+                        )
 
+            # log results
             for key, value in zip(
-                ["logps_theta", "logps_ema", "reward", "loss"],
-                [logps_theta, logps_ema, reward, loss],
+                ["logps_theta", "logps_ema", "reward", "reward_beta", "loss"],
+                [logps_theta, logps_ema, reward, reward_beta, loss],
             ):
                 loss_history[key].append(value.detach().cpu())
 
@@ -160,29 +173,28 @@ class WARPTrainer(TorchBase):
         loss_history["completion_sample"] = self.sft_tokenizer.batch_decode(
             completion
         )
+        print(loss_history["completion_sample"])
         # wandb.log(loss_history)
         return theta
 
     def training_run(self):
 
+        # for m in M gather thetas
         thetas = []
         for m in trange(self.num_runs, desc="Going through runs"):
             thetas.append(self.training_step())
         theta_params = [theta.parameters() for theta in thetas]
 
+        # slerp merge
         theta_slerp = copy.deepcopy(self.sft_model)
-        print(next(iter(theta_slerp.parameters())))
         with torch.no_grad():
             for param in zip(theta_slerp.parameters(), *theta_params):
-                param_slerp = param[0]
-                if param_slerp.requires_grad:
-                    param_slerp.copy_(
-                        slerp(param_slerp, param[1:], self.lamb).detach()
+                if param[0].requires_grad:
+                    param[0].copy_(
+                        slerp(param[0], param[1:], 1 / self.num_runs).detach()
                     )
-                    print(param_slerp)
-                break
-        print(next(iter(theta_slerp.parameters())))
 
+        # theta_sft update
         with torch.no_grad():
             for param, param_slerp in zip(
                 self.sft_model.parameters(), theta_slerp.parameters()
@@ -192,16 +204,18 @@ class WARPTrainer(TorchBase):
 
     def training_iterations(self):
 
+        # for i in I
         self.weights = []
         for i in trange(self.num_iterations, desc="Going through iterations"):
             self.training_run()
             self.weights.append(copy.deepcopy(self.sft_model))
 
+        # store for pareto front
         return self.weights
 
     def get_reward(self, prompt: torch.Tensor, response: torch.Tensor):
         return (
-            torch.stack(
+            -torch.stack(
                 [
                     self.reward_model(
                         **self.reward_tokenizer(

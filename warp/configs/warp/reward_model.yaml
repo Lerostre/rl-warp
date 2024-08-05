@@ -1,5 +1,5 @@
 reward_model:
-  source: "distilbert/distilbert-imdb-cased"
+  source: "distilbert/distilbert-base-cased"
   name: "reward_model"
   args:
     local_files_only: False

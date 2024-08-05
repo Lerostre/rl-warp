@@ -7,6 +7,7 @@ defaults:
   - warp/reward_tokenizer@_here_
   - warp/optimizer@_here_
   - warp/scheduler@_here_
+  - warp/peft@_here_
 
 seed: 42
 project: "warp"

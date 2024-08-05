@@ -19,11 +19,11 @@ from structs.warp_trainer import WARPTrainer
 from utils.data import create_warp_dataset
 from utils.misc import seed_everything
 
-from peft import LoraConfig
+from peft import get_peft_model, LoraConfig
 
 
 @hydra.main(
-    config_path="configs", config_name="reward_config", version_base="1.2"
+    config_path="configs", config_name="warp_config", version_base="1.2"
 )
 def train_warp(cfg: DictConfig) -> None:
 
@@ -35,10 +35,6 @@ def train_warp(cfg: DictConfig) -> None:
     dataset_path = Path(DATASET_DIR, cfg.dataset.name)
     sft_model_path = Path(MODEL_DIR, cfg.sft_model.name)
     sft_tokenizer_path = Path(MODEL_DIR, cfg.sft_tokenizer.source)
-
-    # load trainer configs
-
-    # load tokenizer and model
     if not os.path.exists(sft_tokenizer_path):
         sft_tokenizer_path = cfg.sft_tokenizer.source
     if not os.path.exists(sft_model_path):
@@ -46,6 +42,7 @@ def train_warp(cfg: DictConfig) -> None:
     reward_tokenizer_path = Path(MODEL_DIR, cfg.reward_tokenizer.source)
     reward_model_path = Path(MODEL_DIR, cfg.reward_model.name)
 
+    # load tokenizers and models
     logger.info(f"Loading SFT tokenizer from `{sft_tokenizer_path}`")
     sft_tokenizer = AutoTokenizer.from_pretrained(
         sft_tokenizer_path,
@@ -67,7 +64,7 @@ def train_warp(cfg: DictConfig) -> None:
         **cfg.reward_model.args,
     ).to(cfg.device)
 
-    # prepare dataset
+    # prepare dataset and dataloader
     if not os.path.exists(dataset_path) or cfg.dataset.rewrite:
         logger.info(f"Creating `{cfg.dataset.name}` dataset")
         dataset = create_warp_dataset(
@@ -88,13 +85,10 @@ def train_warp(cfg: DictConfig) -> None:
     #     project=cfg.project,
     #     name=str(cfg.run_name),
     # )
-    # for param in sft_model.parameters():
-    #     param.requires_grad = False
-    # peft_config = LoraConfig(
-    #     lora_alpha=4, lora_dropout=0.1, task_type="CAUSAL_LM"
-    # )
-    # sft_model.add_adapter(peft_config)
-    # print(sft_model)
+
+    lora_config = LoraConfig(OmegaConf.to_container(cfg.peft))
+    get_peft_model(sft_model, lora_config)
+
     trainer = WARPTrainer(
         reward_tokenizer=reward_tokenizer,
         reward_model=reward_model,
@@ -109,10 +103,9 @@ def train_warp(cfg: DictConfig) -> None:
         **cfg.trainer,
     )
     trainer.training_iterations()
-    torch.save(trainer.sft_model.state_dict(), Path(MODEL_DIR), cfg.run_name)
 
-    logger.info(f"Saving model to `{model_path}`")
-    trainer.save_model(model_path)
+    logger.info(f"Saving model to `{cfg.run_name}`")
+    trainer.sft_model.save_pretrained(Path(MODEL_DIR), cfg.run_name+"/")
 
 
 train_warp()
