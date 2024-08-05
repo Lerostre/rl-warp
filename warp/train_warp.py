@@ -105,7 +105,13 @@ def train_warp(cfg: DictConfig) -> None:
     trainer.training_iterations()
 
     logger.info(f"Saving model to `{cfg.run_name}`")
-    trainer.sft_model.save_pretrained(Path(MODEL_DIR), cfg.run_name+"/")
+    # очень некрасиво, но ещё некрасивее это не сохранять модель, имея
+    # тот же самый синтаксис, что и тренер
+    # trainer.sft_model.save_pretrained(Path(MODEL_DIR), cfg.run_name+"/")
+    import pickle
+
+    with open(f"{MODEL_DIR}/{cfg.run_name}.pkl", "wb") as f:
+        pickle.dump(trainer.sft_model, f)
 
 
 train_warp()
